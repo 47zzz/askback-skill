@@ -19,6 +19,8 @@ python3 <這個repo>/scripts/look.py          # 看：整理題目、截圖、�
 python3 <這個repo>/scripts/render.py        # 做：驗算 → 配音 → 合成 → output/askback.mp4
 ```
 
+`team/` 是組員的協作紀錄與測試成果，不屬於 skill；產生影片時不要讀取或複製其中的檔案。
+
 ## 設計：五條規則
 
 1. 一支影片只解一個困惑。
@@ -46,6 +48,7 @@ scripts/render.py   做：lesson.json → output/askback.mp4
 scripts/paint.py    選用：需要時生一張沒有字的插圖
 examples/           三種形式的 lesson.json 範例（寫法參考，不是答案庫）
 fonts/              芫荽 Iansui、Noto Sans TC（SIL OFL 1.1）
+team/               組員協作區：文件、測試成果（不屬於 skill，見 team/README.md）
 ```
 
 ## 授權與來源
