@@ -19,6 +19,30 @@ python3 <這個repo>/scripts/look.py          # 看：整理題目、截圖、�
 python3 <這個repo>/scripts/render.py        # 做：驗算 → 配音 → 合成 → output/askback.mp4
 ```
 
+## 系統流程
+
+```mermaid
+flowchart TD
+    IN["輸入 input/<br/>case_input.json・prefix.mp4・prefix.vtt（可能沒有）"]
+    LOOK["① 看：look.py（程式）<br/>截圖・逐字稿・配色"]
+    THINK["② 想：AI agent（照 SKILL.md）<br/>學生卡在哪？一句話答案？原片怎麼教？"]
+    WRITE["③ 寫：AI agent 寫腳本 work/lesson.json<br/>形式・驗算式・每句旁白＋對應畫面"]
+    RENDER["④ 做：render.py（程式）<br/>驗算 → 配音 → 排時間 → 畫畫面 → 合成 → 查長度"]
+    OUT["輸出 output/<br/>askback.mp4・preview.jpg"]
+    CHECK{"AI agent 看 preview.jpg<br/>自我檢查"}
+    DONE(["完成"])
+
+    IN --> LOOK -->|work/look/| THINK --> WRITE --> RENDER
+    RENDER -->|通過| OUT --> CHECK
+    RENDER -->|驗算錯／塞不下／長度不對| WRITE
+    CHECK -->|有問題| WRITE
+    CHECK -->|沒問題| DONE
+```
+
+- **程式做兩頭**：前面把影片變成 AI 看得懂的材料，後面把腳本變成影片。
+- **AI 做中間**：理解問題、決定教法、寫腳本。
+- **兩個回頭的迴圈**：程式檢查不過會擋下來；通過後 AI 還要自己看預覽圖再檢查一次。
+
 `team/` 是組員的協作紀錄與測試成果，不屬於 skill；產生影片時不要讀取或複製其中的檔案。
 
 ## 設計：五條規則

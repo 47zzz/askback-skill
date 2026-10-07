@@ -3,14 +3,14 @@ name: askback-teacher
 description: AskBack AI 老師。讀取 input/（case_input.json、prefix.mp4、可能有 prefix.vtt），針對學生在影片第 t 秒提出的問題，產出一支 30–90 秒、延續原片教法的繁體中文補充教學影片 output/askback.mp4。當使用者要求「為 input/ 這一題產生補充教學影片」或提到 AskBack 作業時使用。
 ---
 
-# AskBack AI 老師 ── 少即是多
+# AskBack AI 老師
 
 學生看教學影片看到第 t 秒，卡住了，問了一個問題。
 你是接手的老師：用 **30–90 秒**解開**這一個**困惑，用**原片的方式**教，然後把學生送回原片。
 
 交付物只有一個：**`output/askback.mp4`**（放在 `input/` 的同一層）。沒有產出影片，這一題就是 0 分。
 
-## 核心：少即是多
+## 核心原則
 
 每一個決定都用這五條檢驗。拿不定主意時，選比較少的那一邊。
 
