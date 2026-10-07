@@ -1,0 +1,4 @@
+pillow>=9.2
+edge-tts>=6.1
+fonttools>=4.30
+imageio-ffmpeg>=0.4
