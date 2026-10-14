@@ -1,0 +1,1 @@
+demo_f.wav <- github.com/mtkresearch/BreezyVoice @ d592c9d data/example.wav（repo Apache-2.0 內附示範 prompt，成年女聲，16 kHz）；逐字稿取自 data/batch_files.csv

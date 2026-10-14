@@ -8,6 +8,10 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 MODEL="${1:-breezyvoice}"
 export PATH="$HOME/.local/bin:$PATH"
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$HOME/.local/bin" INSTALLER_NO_MODIFY_PATH=1 sh
+# 家目錄在 NFS 上時，下載快取放本機磁碟會快很多（CUDA 函式庫有好幾 GB）
+if [ -z "${UV_CACHE_DIR:-}" ] && [ "$(stat -f -c %T "$HOME" 2>/dev/null)" = "nfs" ] && [ -w /tmp ]; then
+  export UV_CACHE_DIR="/tmp/uv-cache-$(id -u)"
+fi
 export UV_CACHE_DIR="${UV_CACHE_DIR:-$HOME/.cache/uv}"
 
 if [ "$MODEL" = "breezyvoice" ]; then
@@ -20,6 +24,7 @@ if [ "$MODEL" = "breezyvoice" ]; then
   [ -d "$V" ] || uv venv -q -p 3.10 "$V"
   uv pip install -q -p "$V" torch==2.3.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
   uv pip install -q -p "$V" -r "$HERE/requirements-breezy.txt"
+  uv pip install -q -p "$V" --no-deps "openai-whisper==20250625"   # 模型設定檔用它的 tokenizer
   echo breezyvoice > "$HERE/model.txt"
 elif [ "$MODEL" = "cosyvoice3" ]; then
   V="$HERE/.venv-cosyvoice3"
@@ -50,7 +55,10 @@ mkdir -p "$HERE/samples"
 REF="$HERE/voices/demo_f.wav"; [ -f "$REF" ] || REF="$(ls "$HERE"/voices/*.wav 2>/dev/null | head -1 || true)"
 if [ -n "${REF:-}" ]; then
   printf '[{"text": "安裝完成，這是本機語音測試。", "voice": "%s", "rate": "+0%%", "out": "%s/samples/setup_check.wav"}]\n' "$REF" "$HERE" > "$HERE/samples/jobs.json"
-  "$V/bin/python" "$HERE/engine.py" "$HERE/samples/jobs.json" --best-of 1 --model "$MODEL" && echo "[setup_tts] ok -> $HERE/samples/setup_check.wav"
+  if ! "$V/bin/python" "$HERE/engine.py" "$HERE/samples/jobs.json" --best-of 1 --model "$MODEL"; then
+    echo "[setup_tts] ✗ 暖機合成失敗（看上面的錯誤）。render.py 仍會用 edge-tts 出片。"; exit 1
+  fi
+  echo "[setup_tts] ok -> $HERE/samples/setup_check.wav"
 else
   echo "[setup_tts] 沒有任何參考聲音可以暖機；跑一題時 look.py 會從原片抽出老師的聲音。"
 fi
