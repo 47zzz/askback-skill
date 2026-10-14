@@ -1,0 +1,21 @@
+{
+  "name": "askback-remotion",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AskBack 的 Remotion 畫面引擎：render.py 餵 props，這裡只負責把每句旁白對應的畫面動起來",
+  "scripts": {
+    "render": "remotion render src/index.ts Lesson out/askback.mp4",
+    "studio": "remotion studio src/index.ts",
+    "browser": "remotion browser ensure"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.533",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.533"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.31",
+    "typescript": "5.9.3"
+  }
+}

@@ -4,3 +4,15 @@ input/
 __pycache__/
 .venv/
 .DS_Store
+# 本機 TTS 與 Remotion 的大檔案
+tts_local/.venv*/
+tts_local/BreezyVoice/
+tts_local/CosyVoice/
+tts_local/pretrained/
+tts_local/samples/
+tts_local/voices/.cache/
+tts_local/model.txt
+remotion/node_modules/
+remotion/out/
+remotion/public/job/
+remotion/public/fonts/

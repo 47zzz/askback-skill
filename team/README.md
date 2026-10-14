@@ -24,8 +24,8 @@ team/
 ```bash
 git clone <repo 連結> askback-skill
 cd askback-skill
-python3 -m pip install -r requirements.txt
-python3 -m pip install faster-whisper      # 選用：沒有字幕的題目要語音辨識
+bash setup.sh          # Python 套件、GPU 工具、Remotion
+bash setup.sh --tts    # 本機 voice-clone TTS（BreezyVoice，需要 GPU，約 8 GB）
 ```
 
 想在自己的 Claude Code 裡用 `/askback-teacher` 呼叫：
@@ -84,9 +84,11 @@ bash <repo 路徑>/team/save_output.sh
 
 ## 目前還沒做的事
 
+- [ ] 在有 3090 的機器上實跑一次 `setup.sh --tts` 與 clone 配音（目前 Remotion 與 Pillow 引擎、look.py、voice.py 已在 Linux 無 GPU 的機器上測過；BreezyVoice adapter 只在 CPU 上跑過安裝檢查）
+- [ ] 用真實均一影片驗證 voice.py 抽參考音檔的品質（有背景音樂、角色劇兩個聲音的題目）
 - [ ] 讓全新的 agent 只讀 repo 說明跑完一題（Claude Code 與 Codex 各一次）
 - [ ] `slides` 形式還沒有完整題目測過
-- [ ] 在 Linux 上測一次
+- [x] 在 Linux 上測一次（2026-10-14，V01/V03/V13 範例腳本，兩個引擎）
 - [ ] `scripts/paint.py`（生圖）與 OpenAI 的語音、辨識備援沒有金鑰可測
 - [ ] 決定 `examples/` 與 `team/outputs/` 裡的三題腳本要不要換成非題庫的例子（它們是正式 20 題之一）
 - [ ] 20 題都跑過一輪，填滿進度表

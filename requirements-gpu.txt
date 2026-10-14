@@ -1,0 +1,7 @@
+# look.py / voice.py 的語音辨識與聲音分析。有 GPU 會用 CUDA，沒有也能用 CPU（慢一點、模型小一點）。
+faster-whisper>=1.1
+soundfile>=0.12
+librosa>=0.10
+silero-vad>=5.1
+opencc-python-reimplemented>=0.1.7
+numpy

@@ -1,3 +1,4 @@
+# 基本：沒有 GPU、沒有 node 也能出片
 pillow>=9.2
 edge-tts>=6.1
 fonttools>=4.30

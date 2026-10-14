@@ -7,23 +7,16 @@
   case.txt        題目重點（提問、年段、已知概念、進度摘要）
   overview.jpg    整段 prefix 的 12 格縮圖（看原片的形式與節奏）
   end_1..4.jpg    提問前最後 20 秒的 4 張原尺寸截圖（看學生卡住時畫面上有什麼）
-  transcript.txt  逐字稿：有 prefix.vtt 就用它，沒有就語音辨識；都不行就略過
+  transcript.txt  逐字稿：有 prefix.vtt 就用它，沒有就語音辨識（有 GPU 用 large-v3）；都不行就略過
   palette.txt     最後一格的主要顏色（照抄進 lesson.json 的 style）
+另外產出 work/voice/：原片老師的音高、語速（profile.json）與 clone 用的參考音檔（teacher.wav + teacher.txt）。
 
     python3 scripts/look.py --at 02:38 01:05     另外截指定時間的畫面 → work/look/at_0238.jpg
 """
-import argparse, json, os, pathlib, re, shutil, subprocess, sys
+import argparse, json, os, pathlib, re, subprocess, sys
 
-
-def ffmpeg() -> str:
-    found = shutil.which("ffmpeg")
-    if found:
-        return found
-    try:
-        import imageio_ffmpeg
-        return imageio_ffmpeg.get_ffmpeg_exe()
-    except ImportError:
-        sys.exit("找不到 ffmpeg。請先執行：python3 -m pip install imageio-ffmpeg")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from common import ffmpeg, gpu, stamp
 
 
 def grab(src, t, dst, width=None):
@@ -31,10 +24,6 @@ def grab(src, t, dst, width=None):
     subprocess.run([ffmpeg(), "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{max(t, 0):.2f}",
                     "-i", str(src), "-frames:v", "1", *vf, "-q:v", "3", str(dst)], check=False)
     return pathlib.Path(dst).exists()
-
-
-def stamp(s):
-    return f"{int(s) // 60:02d}:{int(s) % 60:02d}"
 
 
 def vtt_to_text(vtt):
@@ -69,13 +58,29 @@ def asr(video, work):
             print(f"  OpenAI 辨識失敗（{e}），改試本機模型")
     try:
         from faster_whisper import WhisperModel
-        model = WhisperModel(os.environ.get("ASKBACK_ASR_MODEL", "small"), device="cpu", compute_type="int8")
-        segs, _ = model.transcribe(str(wav), language="zh", initial_prompt="這是一段臺灣老師上課的錄音，請用繁體中文。",
+        import soundfile as sf
+        y, _ = sf.read(str(wav), dtype="float32")          # 餵陣列，避開 PyAV 版本問題
+        if gpu():                                           # 3090：large-v3 幾十秒就聽完整段
+            name = os.environ.get("ASKBACK_ASR_MODEL", "large-v3")
+            try:
+                model = WhisperModel(name, device="cuda", compute_type="float16")
+            except Exception as e:
+                print(f"  GPU 版 Whisper 開不起來（{e}），改用 CPU small")
+                name, model = "small", WhisperModel("small", device="cpu", compute_type="int8")
+        else:
+            name = os.environ.get("ASKBACK_ASR_MODEL", "small")
+            model = WhisperModel(name, device="cpu", compute_type="int8")
+        segs, _ = model.transcribe(y, language="zh", initial_prompt="這是一段臺灣老師上課的錄音，請用繁體中文。",
                                    vad_filter=True, condition_on_previous_text=False)
-        rows = [f"[{stamp(s.start)}] {s.text.strip()}" for s in segs if "繁體中文" not in s.text]
-        return "\n".join(rows), "faster-whisper（機器辨識，會有錯字，數字與專有名詞以畫面為準）"
+        try:
+            import opencc
+            cc = opencc.OpenCC("s2twp").convert
+        except ImportError:
+            cc = lambda t: t
+        rows = [f"[{stamp(s.start)}] {cc(s.text.strip())}" for s in segs if "繁體中文" not in s.text]
+        return "\n".join(rows), f"faster-whisper {name}（機器辨識，會有錯字，數字與專有名詞以畫面為準）"
     except ImportError:
-        return None, "沒有語音辨識工具（可選：python3 -m pip install faster-whisper）"
+        return None, "沒有語音辨識工具（可選：python3 -m pip install faster-whisper soundfile）"
     except Exception as e:
         return None, f"語音辨識失敗：{e}"
 
@@ -172,6 +177,19 @@ def main():
         (out / "transcript.txt").write_text(f"# 來源：{how}\n{text}\n", encoding="utf-8")
     print(f"\n逐字稿：{how}")
     print(f"材料在 {out}/ ：" + "、".join(sorted(p.name for p in out.iterdir() if p.suffix in ('.jpg', '.txt'))))
+
+    # 聲音：原片老師的音高與語速 → 語速預設；最乾淨的一段 → clone 的參考音檔
+    try:
+        import voice
+        prof = voice.profile(video, pathlib.Path(a.work), out / "transcript.txt", src / "prefix.vtt", t)
+        ref = prof.get("teacher_ref") or {}
+        print(f"\n聲音：{'女聲' if prof.get('gender') == 'female' else '男聲'}，F0 {prof.get('f0_hz')} Hz，"
+              f"{prof.get('chars_per_sec') or '?'} 字/秒 → 語速 {prof.get('rate')}"
+              + (f"；參考音檔 work/voice/teacher.wav（{ref.get('from_')}，{ref.get('seconds')} 秒）" if ref else "；沒抽到參考音檔"))
+    except SystemExit as e:
+        print(f"\n聲音：{e}（影片仍可做，語音會用 edge-tts）")
+    except Exception as e:
+        print(f"\n聲音分析失敗（{e}）：影片仍可做，語音會用 edge-tts 或聲音庫")
 
 
 if __name__ == "__main__":

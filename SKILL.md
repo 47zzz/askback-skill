@@ -1,12 +1,12 @@
 ---
 name: askback-teacher
-description: AskBack AI 老師。讀取 input/（case_input.json、prefix.mp4、可能有 prefix.vtt），針對學生在影片第 t 秒提出的問題，產出一支 30–90 秒、延續原片教法的繁體中文補充教學影片 output/askback.mp4。當使用者要求「為 input/ 這一題產生補充教學影片」或提到 AskBack 作業時使用。
+description: AskBack AI 老師。讀取 input/（case_input.json、prefix.mp4、可能有 prefix.vtt），針對學生在影片第 t 秒提出的問題，產出一支 30–90 秒、延續原片教法與老師聲線的繁體中文補充教學影片 output/askback.mp4。當使用者要求「為 input/ 這一題產生補充教學影片」或提到 AskBack 作業時使用。
 ---
 
 # AskBack AI 老師
 
 學生看教學影片看到第 t 秒，卡住了，問了一個問題。
-你是接手的老師：用 **30–90 秒**解開**這一個**困惑，用**原片的方式**教，然後把學生送回原片。
+你是接手的老師：用 **30–90 秒**解開**這一個**困惑，用**原片的方式**、**原片老師的聲音**教，然後把學生送回原片。
 
 交付物只有一個：**`output/askback.mp4`**（放在 `input/` 的同一層）。沒有產出影片，這一題就是 0 分。
 
@@ -17,24 +17,30 @@ description: AskBack AI 老師。讀取 input/（case_input.json、prefix.mp4、
 1. **一支影片只解一個困惑。** 不補充、不延伸、不預告後面的課。
 2. **一句話只做一件事。** 一句旁白＝一個畫面動作。想做兩件事，就寫成兩句。
 3. **一個畫面只放一個重點。** 放不下不是縮小字，是刪東西。
-4. **能沿用原片的，就不要自己做。** 原片的例子、用語、顏色、畫面，直接拿來用。
+4. **能沿用原片的，就不要自己做。** 原片的例子、用語、顏色、畫面、聲音、語速，直接拿來用。
 5. **能算的，就不要用想的。** 每個數字都寫成算式，交給程式驗算。
 
 寫完再問一次：**刪掉這一句，學生會少懂什麼？** 答不出來就刪。
+
+## 環境：你有一張 GPU
+
+執行這個 skill 的環境預設有一張 **NVIDIA RTX 3090（24 GB）**。程式會自動用它跑本機模型：
+語音辨識（Whisper large-v3）、原片老師的聲音分析、**voice-clone TTS**（BreezyVoice）、合成結果的聽寫比對。
+不需要任何金鑰、不需要網路上的語音服務。沒有 GPU 的話每一步都有備援（CPU 小模型、edge-tts），一樣能出片，只是聲音不像原片老師。
 
 ## 四步：看 → 想 → 寫 → 做
 
 以下指令都在「`input/` 所在的那一層」執行。`SKILL` 代表這個 repo 下載後的路徑。
 
-### 0. 準備（一次）
+### 0. 準備（一次，約 3–10 分鐘）
 
 ```bash
-python3 -m pip install -r SKILL/requirements.txt
-python3 -m pip install faster-whisper   # 選用：沒有字幕的題目才需要；裝不起來就跳過
+bash SKILL/setup.sh          # Python 套件 + GPU 工具 + Remotion 畫面引擎（有 node 才裝）
+bash SKILL/setup.sh --tts    # 再加本機 voice-clone TTS（BreezyVoice，需要 GPU；約 8 GB 磁碟，第一次會下載權重）
 ```
 
-系統不讓裝（externally-managed）就先 `python3 -m venv .venv && . .venv/bin/activate` 再裝。
-不需要任何金鑰：語音預設用免費的 edge-tts。
+裝不起來的部分會自己跳過並說明（例如沒有 node 就用 Pillow 引擎、TTS 裝不成就用 edge-tts）。**不要卡在安裝**：先確定能出片，再回頭補。
+系統 python 不讓裝套件時 setup.sh 會自己建 `SKILL/.venv`，之後的 `python3` 請改用 `SKILL/.venv/bin/python`。
 
 ### 1. 看
 
@@ -42,14 +48,16 @@ python3 -m pip install faster-whisper   # 選用：沒有字幕的題目才需�
 python3 SKILL/scripts/look.py
 ```
 
-它會印出題目重點，並在 `work/look/` 放好材料。**全部都要打開看**：
+它會印出題目重點，並在 `work/look/` 與 `work/voice/` 放好材料。**全部都要打開看**：
 
 | 檔案 | 看什麼 |
 |---|---|
-| `overview.jpg` | 原片是哪一種形式？節奏快還是慢？ |
-| `end_1.jpg`–`end_4.jpg` | 學生卡住的那一刻，畫面上有什麼？顏色、字體、版面長怎樣？ |
-| `transcript.txt` | 老師怎麼說話？用哪些詞？舉什麼例子？（機器辨識的會有錯字，數字以畫面為準） |
-| `palette.txt` | 背景色與強調色，直接抄進 `style` |
+| `look/overview.jpg` | 原片是哪一種形式？節奏快還是慢？ |
+| `look/end_1.jpg`–`end_4.jpg` | 學生卡住的那一刻，畫面上有什麼？顏色、字體、版面長怎樣？ |
+| `look/transcript.txt` | 老師怎麼說話？用哪些詞？舉什麼例子？（機器辨識的會有錯字，數字以畫面為準） |
+| `look/palette.txt` | 背景色與強調色，直接抄進 `style` |
+| `voice/profile.json` | 老師的音高、語速（字/秒）與建議語速 `rate`；`teacher_ref` 是抽出來當參考的那一段 |
+| `voice/teacher.wav` + `teacher.txt` | clone 用的參考音檔（原片老師最乾淨的 4–12 秒）與逐字稿。**聽一下**：只有老師一個人在講、沒有音樂蓋過才算合格；不合格就換 `ref_2.wav` 或 `ref_3.wav` 蓋過去（連同逐字稿），或照下面「聲音」一節換成聲音庫 |
 
 沒有字幕、也沒有語音辨識時，`transcript.txt` 不會出現：照常做，靠截圖和 `case_input.json` 的 `context_summary`。
 需要某個時間點的畫面當圖用：`python3 SKILL/scripts/look.py --at 02:38`。
@@ -106,10 +114,10 @@ python3 SKILL/scripts/look.py
 
 | 原片是 | 用 | 特徵 |
 |---|---|---|
-| 電子黑板手寫、逐步解題 | `board` | 深色底、手寫字、算式一個字一個字寫出來 |
-| 投影片圖解、真人＋螢幕錄影 | `slides` | 淺色底、標題＋重點＋一張圖 |
-| 動畫角色劇、插畫圖卡 | `story` | 角色對話泡泡；每句加 `"who": "角色名"`，不同角色不同聲音 |
-| 實驗實拍、實物操作 | `lab` | 以原片截圖為主角，在上面圈、指、標 |
+| 電子黑板手寫、逐步解題 | `board` | 深色底、手寫字、算式像筆一樣從左寫到右 |
+| 投影片圖解、真人＋螢幕錄影 | `slides` | 淺色底、標題＋重點＋一張圖，重點依序浮上來 |
+| 動畫角色劇、插畫圖卡 | `story` | 角色對話泡泡彈出來；每句加 `"who": "角色名"`，不同角色不同聲音 |
+| 實驗實拍、實物操作 | `lab` | 以原片截圖為主角，在上面圈、指、標（圈和箭頭是畫出來的） |
 
 再用 `bg`、`ink`、`colors` 把顏色調成 `palette.txt` 的樣子。原片是混合形式（例如板書＋照片），選主要的那一種，再用 `figure` 補另一種。
 
@@ -126,11 +134,12 @@ python3 SKILL/scripts/look.py
 - scene 的 `layout`：`text`（預設，可 `"cols": 2` 做左右對照）、`figure-left`、`figure-right`、`figure`（整面是圖）。
 - 圖的來源依序考慮：**① 原片截圖**（`"figure": {"image": "look/at_0238.jpg", "crop": [x1,y1,x2,y2]}`）→ **② 用 shape 畫簡圖**（`"figure": {}`）→ ③ 真的都不行才用 `SKILL/scripts/paint.py` 生一張**沒有字**的插圖。字、數字、算式永遠由 `line` 和 `label` 寫，不要畫進圖裡。
 
-**旁白 `say` 是唸出來的，字幕 `sub` 是看的。** 數字、符號、算式在 `say` 寫成唸法（「一千五百九十八減二百六十」「根號十八」「二分之一」），在 `sub` 寫成符號（「1598 − 260」）。沒有符號就不用寫 `sub`。一句不超過 40 字。
+**旁白 `say` 是唸出來的，字幕 `sub` 是看的。** 數字、符號、算式在 `say` 一律寫成唸法（「一千五百九十八減二百六十」「根號十八」「二分之一」），在 `sub` 寫成符號（「1598 − 260」）。沒有符號就不用寫 `sub`。一句不超過 40 字。
+`say` 裡留下的阿拉伯數字程式會幫你轉成唸法，但多音字不會：**「長」「行」「重」「樂」「和」這類字，唸法有疑慮就在字後面標注音**，例如 `邊長[:ㄔㄤ2]`、`行[:ㄒㄧㄥ2]走`（只影響聲音，字幕不會出現）。英文術語盡量改中文，非用不可就單獨一句。
 
 **`checks`：每個出現在影片裡的計算結果都要有一條。** 寫成 Python 比較式，可用 `sqrt`、`F(1,3)`（分數）、`isclose(a, b)`、`pi`、`sin`、`log` 等。有一條不成立，render 就會停下來。完全沒有數字的題目才可以不寫。
 
-其他可調：`style.rate`（語速，如 `"-5%"`；原片慢就慢一點）、`beat.pause`（這句之後多停幾秒，讓學生想）、`style.voices`（`{"角色名": "zh-TW-YunJheNeural"}`；可用 `zh-TW-HsiaoChenNeural`、`zh-TW-HsiaoYuNeural`、`zh-TW-YunJheNeural`）。
+**聲音與語速（通常不用寫）：** 預設 clone `work/voice/teacher.wav` 的聲線、語速用 `profile.json` 建議的 `rate`。想改：`style.rate`（如 `"-5%"`）、`beat.pause`（這句之後多停幾秒，讓學生想）、`style.voice`（聲音庫的名字，或任何 wav 的路徑）、`style.voices`（`{"角色名": "聲音"}`，角色劇用；沒寫的角色會自動配一個性別不同的聲音）。沒有 GPU 時這些名字會對應到 edge-tts 的 `zh-TW-HsiaoChenNeural`、`zh-TW-HsiaoYuNeural`、`zh-TW-YunJheNeural`。
 
 ### 4. 做
 
@@ -138,22 +147,23 @@ python3 SKILL/scripts/look.py
 python3 SKILL/scripts/render.py
 ```
 
-它會驗算、逐句配音、依實際語音長度排時間、畫面合成，產出：
+它會驗算、逐句配音（clone 原片老師的聲音；每句合成 3 次、用 Whisper 聽回來挑最準的一次）、依實際語音長度排時間、用 Remotion 把畫面動起來（沒有 node 就用 Pillow 逐格畫），產出：
 
 - `output/askback.mp4` ── 交付的影片（1280×720，含字幕、「AI 生成教學示範，非原講者本人」角標、教材來源標示）
 - `output/preview.jpg` ── 每一句講完時的畫面
 
-**打開 `preview.jpg` 看過才算完成。** 然後用下面的清單檢查，有問題就改 `lesson.json` 重跑（沒改到的句子不會重新配音，很快）：
+**打開 `preview.jpg` 看過、聽過 `askback.mp4` 才算完成。** 然後用下面的清單檢查，有問題就改 `lesson.json` 重跑（沒改到的句子不會重新配音，很快）：
 
 - [ ] 長度在 30–90 秒（render 會告訴你；超過就**刪一整句**，不要每句都縮一點）
 - [ ] 假裝是這個年級的學生，只看問題和旁白：困惑解開了嗎？有沒有哪個詞聽不懂？
 - [ ] 假裝是嚴格的科任老師：有沒有哪一句不夠精確、少了條件、或說得比事實多？
 - [ ] 畫面：字沒有疊在一起、沒有跑出去；圈和箭頭指在對的地方
-- [ ] 形式、顏色、語氣和原片對得上；用的是原片的例子
+- [ ] 形式、顏色、語氣、語速和原片對得上；用的是原片的例子
+- [ ] 聲音：render 印出 `cer=` 大於 0.1 的句子要親耳聽；唸錯的多音字補注音、重跑
 - [ ] 沒有用到提問時間之後的內容
 - [ ] 逐句再問：刪掉它，學生會少懂什麼？
 
-最後回報 `output/askback.mp4` 的路徑與秒數。
+最後回報 `output/askback.mp4` 的路徑、秒數、用了哪個語音後端與畫面引擎。
 
 ## 出問題時
 
@@ -161,6 +171,10 @@ python3 SKILL/scripts/render.py
 |---|---|
 | render 說驗算沒過 | 內容錯了。回到第 2 步改對，不要刪掉那條 check |
 | render 說畫面塞不下 | 少放一點：刪字、`clear`、或拆成兩個 scene |
+| 本機 clone TTS 失敗 | render 會自動改用 edge-tts 出片（會印 ⚠）。先交出影片；有時間再看 `tts_local/` 的錯誤訊息，或 `bash SKILL/setup.sh --tts` 重裝 |
+| 參考音檔有音樂或兩個人 | 換 `work/voice/ref_2.wav`／`ref_3.wav`，或 `ASKBACK_CLONE_SOURCE=bank python3 SKILL/scripts/render.py` 改用聲音庫裡最像老師的聲音 |
+| 某句唸錯字 | 在 `say` 裡該字後面加注音 `字[:ㄓㄨㄥ4]`，或換個說法；只有這句會重合成 |
+| Remotion 引擎失敗 | render 會自動改用 Pillow 引擎。想修：到 `SKILL/remotion` 跑 `npm install && npx remotion browser ensure` |
 | 所有語音服務都失敗 | 照訊息指示，用環境裡任何 TTS 把那一句存成指定的 wav，再重跑 |
 | 沒有 ffmpeg | `python3 -m pip install imageio-ffmpeg`（已在 requirements 裡） |
 | 沒有字幕也沒有語音辨識 | 照常做：截圖＋`context_summary` 足夠判斷形式與進度 |
@@ -168,9 +182,15 @@ python3 SKILL/scripts/render.py
 
 無論如何都要交出一支影片。做不到最好的畫面，就做最簡單的：`board` 或 `slides`，幾行字，講清楚。
 
+## 聲音：clone 的是誰
+
+- 預設（`ASKBACK_CLONE_SOURCE=video`）clone **原片老師**：`look.py` 從 prefix.mp4 抽出老師最乾淨的一段當 one-shot 參考，所以補充影片聽起來像同一位老師繼續講。
+- 均一素材包聲明**不含原講者的聲紋授權**（作業說明建議用一般 TTS 或自己的聲音）。要不要用原講者聲線是這個專案的決定；要改回去只需 `ASKBACK_CLONE_SOURCE=bank`（聲音庫：內附示範聲音，或用 `python3 SKILL/scripts/voice.py prep 自己的錄音.wav --name me --gender female` 加進自己的聲音），程式會挑性別、音高、語速最接近老師的那一個。
+- 不管用哪種聲音，「AI 生成教學示範，非原講者本人」角標每一格都在，render 會自動加，**不要拿掉**。
+
 ## 不做的事
 
-- 不模仿原講者的聲音或肖像；只用一般 TTS。
-- 不把「AI 生成教學示範，非原講者本人」的角標拿掉（render 會自動加）。
+- 不把「AI 生成教學示範，非原講者本人」的角標拿掉。
 - 不在影片裡放提問時間之後才出現的內容、不宣稱原講者或均一平台為這支影片背書。
+- 不用原講者的肖像（畫面只用截圖、簡圖、文字）。
 - 全程繁體中文、臺灣用語。
