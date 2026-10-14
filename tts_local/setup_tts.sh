@@ -8,10 +8,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 MODEL="${1:-breezyvoice}"
 export PATH="$HOME/.local/bin:$PATH"
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$HOME/.local/bin" INSTALLER_NO_MODIFY_PATH=1 sh
-# 家目錄在 NFS 上時，下載快取放本機磁碟會快很多（CUDA 函式庫有好幾 GB）
-if [ -z "${UV_CACHE_DIR:-}" ] && [ "$(stat -f -c %T "$HOME" 2>/dev/null)" = "nfs" ] && [ -w /tmp ]; then
-  export UV_CACHE_DIR="/tmp/uv-cache-$(id -u)"
-fi
+# 注意：不要把快取放 /tmp（有些機器的 /tmp 是記憶體做的，好幾 GB 的 CUDA 函式庫會吃光 RAM）
 export UV_CACHE_DIR="${UV_CACHE_DIR:-$HOME/.cache/uv}"
 
 if [ "$MODEL" = "breezyvoice" ]; then

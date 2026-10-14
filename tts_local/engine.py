@@ -25,6 +25,7 @@ def clean(text: str) -> str:
     text = verbalize(text.strip())
     text = text.translate(str.maketrans({",": "，", "!": "！", "?": "？", ";": "；", ":": "：", "(": "（", ")": "）"}))
     text = re.sub(r"[…⋯]+", "，", text)
+    text = re.sub(r"[，、；：]+$", "", text)
     if text and not re.search(r"[。！？]$", text):
         text += "。"
     return text
@@ -47,10 +48,24 @@ def ref_text_for(wav: pathlib.Path, asr) -> str:
     return text
 
 
+def preload_cuda():
+    """CTranslate2 要 libcublas.so.12 / cuDNN 9（pip 的 nvidia-* 套件），先用 RTLD_GLOBAL 載入。"""
+    import ctypes, glob, site
+    for pat in ("nvidia/cuda_runtime/lib/libcudart.so.12", "nvidia/cublas/lib/libcublasLt.so.12", "nvidia/cublas/lib/libcublas.so.12",
+                "nvidia/cudnn/lib/libcudnn.so.9", "nvidia/cudnn/lib/libcudnn_*.so.9"):
+        for r in site.getsitepackages():
+            for p in sorted(glob.glob(f"{r}/{pat}")):
+                try:
+                    ctypes.CDLL(p, mode=ctypes.RTLD_GLOBAL)
+                except OSError:
+                    pass
+
+
 class ASR:
     """faster-whisper（GPU）：聽寫參考音檔、檢查合成結果。"""
 
     def __init__(self, name=None):
+        preload_cuda()
         from faster_whisper import WhisperModel
         import torch
         dev = "cuda" if torch.cuda.is_available() else "cpu"
@@ -80,6 +95,8 @@ DIGITS = str.maketrans("0123456789", "零一二三四五六七八九")
 
 
 def norm(t: str) -> str:
+    from zhnum import verbalize
+    t = verbalize(re.sub(r"(?<=\d),(?=\d{3})", "", t))      # Whisper 常把數字寫成 1,598；兩邊都轉成中文讀法再比
     try:
         import opencc
         t = opencc.OpenCC("t2s").convert(t)

@@ -16,7 +16,7 @@
 import argparse, json, os, pathlib, re, subprocess, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from common import ffmpeg, gpu, stamp
+from common import ffmpeg, gpu, preload_cuda, stamp
 
 
 def grab(src, t, dst, width=None):
@@ -57,6 +57,7 @@ def asr(video, work):
         except Exception as e:
             print(f"  OpenAI 辨識失敗（{e}），改試本機模型")
     try:
+        preload_cuda()
         from faster_whisper import WhisperModel
         import soundfile as sf
         y, _ = sf.read(str(wav), dtype="float32")          # 餵陣列，避開 PyAV 版本問題

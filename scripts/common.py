@@ -9,21 +9,32 @@ def die(msg):
     sys.exit(f"\n✗ {msg}\n")
 
 
+def _works(exe) -> bool:
+    try:
+        return subprocess.run([exe, "-hide_banner", "-version"], capture_output=True, timeout=30).returncode == 0
+    except Exception:
+        return False
+
+
 @functools.lru_cache(maxsize=None)
 def ffmpeg() -> str:
+    """系統的 ffmpeg 要真的跑得起來才用（有些容器裡的 /usr/bin/ffmpeg 會因 glibc 不合而壞掉），否則用 imageio-ffmpeg 內附的。"""
     found = shutil.which("ffmpeg")
-    if found:
+    if found and _works(found):
         return found
     try:
         import imageio_ffmpeg
-        return imageio_ffmpeg.get_ffmpeg_exe()
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if _works(exe):
+            return exe
     except ImportError:
-        die("找不到 ffmpeg。請先執行：python3 -m pip install imageio-ffmpeg")
+        pass
+    die("找不到能用的 ffmpeg。請先執行：python3 -m pip install imageio-ffmpeg")
 
 
 def ffprobe() -> str:
     found = shutil.which("ffprobe")
-    if found:
+    if found and _works(found):
         return found
     sib = pathlib.Path(ffmpeg()).with_name("ffprobe")
     return str(sib) if sib.exists() else ""
@@ -63,6 +74,10 @@ def clone_ready() -> bool:
 
 
 def have_node() -> bool:
+    """node 18+。系統沒有就看 ~/.local/bin（setup.sh 會裝在那裡，計算節點也找得到）。"""
+    local = pathlib.Path.home() / ".local" / "bin"
+    if not shutil.which("node") and (local / "node").exists():
+        os.environ["PATH"] = f"{local}:{os.environ.get('PATH', '')}"
     return bool(shutil.which("node") and shutil.which("npx"))
 
 
@@ -72,3 +87,18 @@ def remotion_ready() -> bool:
 
 def stamp(s):
     return f"{int(s) // 60:02d}:{int(s) % 60:02d}"
+
+
+def preload_cuda():
+    """faster-whisper（CTranslate2）要 libcublas.so.12 與 cuDNN 9。pip 裝的 nvidia-* 套件不在預設搜尋路徑，
+    這裡先用 RTLD_GLOBAL 載入，免 root、免設 LD_LIBRARY_PATH。找不到就算了（會退回 CPU）。"""
+    import ctypes, glob, site
+    roots = [p for p in site.getsitepackages() + [site.getusersitepackages()] if p]
+    for pat in ("nvidia/cuda_runtime/lib/libcudart.so.12", "nvidia/cublas/lib/libcublasLt.so.12", "nvidia/cublas/lib/libcublas.so.12",
+                "nvidia/cudnn/lib/libcudnn.so.9", "nvidia/cudnn/lib/libcudnn_*.so.9"):
+        for r in roots:
+            for p in sorted(glob.glob(f"{r}/{pat}")):
+                try:
+                    ctypes.CDLL(p, mode=ctypes.RTLD_GLOBAL)
+                except OSError:
+                    pass

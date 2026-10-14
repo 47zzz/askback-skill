@@ -19,7 +19,7 @@ profile 做三件事：
 import argparse, json, math, os, pathlib, re, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from common import TTS_LOCAL, die, ffmpeg, gpu, run, stamp
+from common import TTS_LOCAL, die, ffmpeg, gpu, preload_cuda, run, stamp
 
 BANK = TTS_LOCAL / "voices"
 SR = 16000
@@ -164,6 +164,7 @@ def vtt_text_between(vtt, s, e):
 def transcribe(wav):
     """逐字稿（zero-shot clone 要附）。有 GPU 用 large-v3，沒有用 small。"""
     try:
+        preload_cuda()
         from faster_whisper import WhisperModel
     except ImportError:
         return None

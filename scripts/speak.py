@@ -64,7 +64,8 @@ def default_clone_voice(work: pathlib.Path) -> str:
         except Exception:
             pass
     names = [n for n in bank_voices() if (BANK / f"{n}.wav").exists()]
-    return names[0] if names else "teacher_f"
+    names += sorted(p.stem for p in BANK.glob("*.wav") if p.with_suffix(".txt").exists() and p.stem not in names)
+    return names[0] if names else "demo_f"
 
 
 # ───────────────────────── 共用：轉 wav、裁靜音、響度 ─────────────────────────
@@ -174,7 +175,7 @@ def speak_clone(jobs: list, cache: pathlib.Path):
         raise RuntimeError("tts_local/.venv 不存在（先跑 tts_local/setup_tts.sh）")
     for j in jobs:
         if not voice_wav(j["voice"]).exists():
-            die(f"找不到聲音「{j['voice']}」。tts_local/voices/ 裡可用：" + "、".join(sorted(p.stem for p in BANK.glob('*.wav'))))
+            raise RuntimeError(f"找不到聲音「{j['voice']}」。tts_local/voices/ 裡可用：" + "、".join(sorted(p.stem for p in BANK.glob('*.wav'))))
     jf = cache / "clone_jobs.json"
     raw = [{"text": j["text"], "voice": j["voice"], "rate": j["rate"], "out": str(cache / f"{j['key']}_raw.wav")} for j in jobs]
     jf.write_text(json.dumps(raw, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -209,7 +210,10 @@ def speak_all(beats: list, cache: pathlib.Path, work: pathlib.Path) -> str:
             b["wav"] = cache / f"{b['key']}.wav"
             if not b["wav"].exists():
                 todo.append(dict(text=b["say"], voice=b["voice"], rate=b["rate"], wav=b["wav"], key=b["key"]))
-        if todo:
+        if todo and not gpu() and not os.environ.get("ASKBACK_CLONE_ON_CPU"):
+            print(f"  ⚠ 沒有 GPU，{len(todo)} 句沒有 clone 快取：不在 CPU 上跑 clone 模型（太慢、太吃記憶體），這次改用 edge-tts。")
+            be = "edge"
+        elif todo:
             try:
                 g = gpu()
                 print(f"  本機 clone TTS（{g['name'] if g else 'CPU，會很慢'}）：{len(todo)} 句要合成，聲音：" + "、".join(sorted({pathlib.Path(j['voice']).stem for j in todo})))

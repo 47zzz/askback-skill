@@ -29,7 +29,13 @@ if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
   echo "[setup] GPU：$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)"
 fi
 
-# Remotion 引擎：需要 node 18+；沒有的話 render.py 自動退回 Pillow 引擎
+# Remotion 引擎：需要 node 18+。系統沒有就裝一份到 ~/.local（免 root）；裝不起來 render.py 自動退回 Pillow 引擎
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v node >/dev/null 2>&1 || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 18 ]; then
+  mkdir -p "$HOME/.local/bin"
+  (curl -sSL https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-x64.tar.xz | tar xJ -C "$HOME/.local" \
+    && ln -sf "$HOME"/.local/node-v22.11.0-linux-x64/bin/{node,npm,npx} "$HOME/.local/bin/") || echo "[setup] ⚠ node 裝不起來"
+fi
 if command -v node >/dev/null 2>&1 && [ "$(node -p 'process.versions.node.split(".")[0]')" -ge 18 ]; then
   (cd "$ROOT/remotion" && npm install --silent --no-audit --no-fund && npx remotion browser ensure >/dev/null 2>&1) \
     && echo "[setup] Remotion 引擎 ok" || echo "[setup] ⚠ Remotion 沒裝成（render.py 會用 Pillow 引擎）"

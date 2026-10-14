@@ -12,7 +12,7 @@ import argparse, ast, json, math, operator, os, pathlib, re, shutil, subprocess,
 from fractions import Fraction
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from common import ROOT, die, ffmpeg, remotion_ready, run
+from common import ROOT, die, ffmpeg, have_node, remotion_ready, run
 from draw import BADGE, FONT_FILES, FORMS, H, SUB_H, W, Fonts, Scene, chrome, scene_props
 from speak import EDGE_VOICES, backend as tts_backend, default_clone_voice, speak_all
 
@@ -72,6 +72,23 @@ def run_checks(checks):
             bad.append(c)
     if bad:
         die("驗算沒過，影片不會產生。先把內容改對，再重跑：\n  " + "\n  ".join(bad))
+
+
+# ───────────────────────── 時間軸與整條旁白 ─────────────────────────
+def fit_to_length(beats, total, target, cache, max_speed=1.15):
+    """總長超過上限時，整條旁白等比例加速（不變音高，ffmpeg atempo），最多 1.15 倍；再不夠就要 agent 刪句子。"""
+    speech = sum(b["dur"] for b in beats)
+    need = speech / max(1.0, speech - (total - target))
+    k = min(max_speed, need)
+    print(f"  ⚠ 預計 {total:.1f} 秒超過上限：旁白整體加速 {k:.2f} 倍" + ("" if k >= need else "（已到上限，還是太長就刪一句）"))
+    for b in beats:
+        out = cache / f"{b['wav'].stem}_x{k:.3f}.wav"
+        if not out.exists():
+            run([ffmpeg(), "-hide_banner", "-loglevel", "error", "-y", "-i", b["wav"], "-af", f"atempo={k:.4f}",
+                 "-ar", "44100", "-ac", "1", "-c:a", "pcm_s16le", out], check=True)
+        b["wav"] = out
+        with wave.open(str(out)) as w:
+            b["dur"] = w.getnframes() / w.getframerate()
 
 
 # ───────────────────────── 時間軸與整條旁白 ─────────────────────────
@@ -148,6 +165,8 @@ def render_pillow(beats, style, ui, total, audio, credit, out):
 
 # ───────────────────────── 引擎二：Remotion ─────────────────────────
 def render_remotion(beats, scenes, style, ui, total, audio, credit, out, lesson_dir, work):
+    if not have_node():
+        raise RuntimeError("找不到 node 18+")
     rdir = ROOT / "remotion"
     pub = rdir / "public" / "job"
     if pub.exists():
@@ -277,8 +296,17 @@ def main():
             seen[who] = (EDGE_VOICES[len(seen) % len(EDGE_VOICES)] if be != "clone" else default_voice) if who else default_voice
         b["voice"] = voices.get(who, seen.get(who, default_voice))
         b["rate"] = b.get("rate", rate)
+    if be == "clone" and not st.get("clone_rate"):
+        for b in beats:                       # clone 已經學到老師的語速；edge 用的 rate 不要再套上去
+            b["rate"] = b.get("clone_rate", "+0%")
+    elif be == "clone":
+        for b in beats:
+            b["rate"] = st["clone_rate"]
     used = speak_all(beats, cache, work)
     total = timeline(beats, gap)
+    if total > MAX_S - 1:
+        fit_to_length(beats, total, MAX_S - 2, cache)
+        total = timeline(beats, gap)
     chars = sum(len(re.sub(r"[\s，。、？！：；,.?!]", "", b["say"])) for b in beats)
     for i, b in enumerate(beats, 1):
         if len(b.get("sub", b["say"])) > 44:
