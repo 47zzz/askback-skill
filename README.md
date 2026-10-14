@@ -3,6 +3,8 @@
 學生看教學影片看到第 t 秒卡住了。這個 skill 讓 AI agent 接手：針對那一個困惑，
 用原片的教法、**原片老師的聲線**做一支 **30–90 秒**的補充教學影片，再把學生送回原片。
 
+> 2026-10-14 版：本機 RTX 3090 跑 Whisper 與 BreezyVoice clone 配音、Remotion 動態畫面；三題已在 3090 上實跑出片（見下方〈實測〉）。
+
 ## 給 agent（Claude Code／Codex）
 
 **請完整讀過 [`SKILL.md`](SKILL.md)，照它的四個步驟做。** 摘要：
@@ -13,7 +15,7 @@
 - 不需要金鑰。預設環境有一張 RTX 3090，本機模型都跑在上面；沒有 GPU、沒有 node 也能出片（edge-tts + Pillow）。
 
 ```bash
-bash <這個repo>/setup.sh                    # 一次：Python 套件、GPU 工具、Remotion
+bash <這個repo>/setup.sh                    # 一次：Python 套件、GPU 工具、Remotion（沒有 node 18+ 會自動裝到 ~/.local）
 bash <這個repo>/setup.sh --tts              # 一次：本機 voice-clone TTS（BreezyVoice，需要 GPU）
 python3 <這個repo>/scripts/look.py          # 看：整理題目、截圖、逐字稿、老師的聲音與語速
 #   …讀材料、想清楚、寫 work/lesson.json（寫法見 SKILL.md，範例在 examples/）…
@@ -28,8 +30,8 @@ flowchart TD
     LOOK["① 看：look.py（程式，GPU）<br/>截圖・配色・Whisper 逐字稿<br/>老師的音高／語速・參考音檔 teacher.wav"]
     THINK["② 想：AI agent（照 SKILL.md）<br/>學生卡在哪？一句話答案？原片怎麼教？"]
     WRITE["③ 寫：AI agent 寫腳本 work/lesson.json<br/>形式・驗算式・每句旁白＋對應畫面"]
-    SPEAK["④a 配音：speak.py（程式，GPU）<br/>BreezyVoice clone 老師聲線・每句 3 次取最準<br/>（沒有 GPU → edge-tts）"]
-    RENDER["④b 畫面：render.py（程式）<br/>驗算 → 排時間 → Remotion 動態 → 合成 → 查長度<br/>（沒有 node → Pillow 逐格畫）"]
+    SPEAK["④a 配音：speak.py（程式，GPU）<br/>BreezyVoice clone 老師聲線・每句 3 次取最準<br/>（沒有 GPU → edge-tts，不在 CPU 跑 clone）"]
+    RENDER["④b 畫面：render.py（程式）<br/>驗算 → 排時間 → Remotion 動態 → 合成 → 查長度<br/>超過 90 秒 → 旁白整體加速（最多 1.15 倍）<br/>（沒有 node／Chrome → Pillow 逐格畫）"]
     OUT["輸出 output/<br/>askback.mp4・preview.jpg"]
     CHECK{"AI agent 看 preview.jpg、聽影片<br/>自我檢查"}
     DONE(["完成"])
@@ -44,6 +46,22 @@ flowchart TD
 - **程式做兩頭**：前面把影片變成 AI 看得懂的材料（連老師的聲音都抽好），後面把腳本變成影片。
 - **AI 做中間**：理解問題、決定教法、寫腳本。agent 只寫 `lesson.json`，不碰 React／TSX。
 - **兩個回頭的迴圈**：程式檢查不過會擋下來；通過後 AI 還要自己看預覽圖、聽聲音再檢查一次。
+
+## 實測（2026-10-14，RTX 3090）
+
+三題用同一份 `lesson.json`，比較舊流程（edge-tts＋Pillow）與新流程（clone 原片老師＋Remotion）：
+
+| 題目 | 原片形式 | 參考音檔（自動挑出） | 每句 CER 平均 | 舊版 | 新版 |
+|---|---|---|---|---|---|
+| V01 認識昆蟲 | 動畫角色劇 | 女聲，02:02–02:11，8.9 秒，SNR 20.2 dB | 0.014 | 61.7 秒 | 75.8 秒 |
+| V03 三位數的連加併式 | 電子黑板手寫 | 男聲，01:12–01:24，11.5 秒，SNR 19.5 dB | 0.021 | 68.6 秒 | 87.5 秒 |
+| V13 豬心解剖 | 實驗實拍 | 男聲，00:22–00:33，11.5 秒，SNR 21.3 dB | 0.014 | 57.7 秒 | 57.7 秒 |
+
+- CER 是 Whisper 把合成語音聽回來和腳本比對的錯字率，0 表示一字不差；27 句裡 17 句是 0。
+- BreezyVoice 載入約 25–45 秒，之後每句（含 3 次合成與品管）約 5–40 秒；一題配音大約 2–4 分鐘。
+- clone 的語速跟著老師走，比 edge-tts 慢的老師（V03）會讓影片變長，要留意 90 秒上限。
+- 三版影片並排的對照頁（組內交流用）：`team/demo/2026-10-14_新舊版對照/index.html`。
+- 計算節點的 Chrome 缺 `libnss3`／`libnspr4`，Remotion 開不起來時會自動退回 Pillow；這次是在計算節點配音、在登入節點用語音快取跑 Remotion。
 
 `team/` 是組員的協作紀錄與測試成果，不屬於 skill；產生影片時不要讀取或複製其中的檔案。
 

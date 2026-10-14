@@ -1,0 +1,45 @@
+{
+  "f0_hz": 132,
+  "gender": "male",
+  "chars_per_sec": 3.14,
+  "pause_sec": 0.5,
+  "speech_sec": 236.5,
+  "segments": 52,
+  "speakers": 1,
+  "teacher_ref": {
+    "file": "teacher.wav",
+    "seconds": 11.5,
+    "snr_db": 19.5,
+    "text": "它是1858本接下來我們再把這1858加上302本科學類的書籍",
+    "from_": "01:12–01:24"
+  },
+  "refs": [
+    {
+      "file": "ref_1.wav",
+      "start": 72.7,
+      "end": 84.2,
+      "seconds": 11.5,
+      "snr_db": 19.5,
+      "score": 7.05,
+      "text": "它是1858本接下來我們再把這1858加上302本科學類的書籍"
+    },
+    {
+      "file": "ref_2.wav",
+      "start": 246.1,
+      "end": 255.4,
+      "seconds": 9.3,
+      "snr_db": 18.3,
+      "score": 6.97
+    },
+    {
+      "file": "ref_3.wav",
+      "start": 257.4,
+      "end": 268.3,
+      "seconds": 10.9,
+      "snr_db": 17.4,
+      "score": 6.94
+    }
+  ],
+  "match": null,
+  "rate": "-20%"
+}

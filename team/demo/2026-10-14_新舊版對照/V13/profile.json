@@ -1,0 +1,45 @@
+{
+  "f0_hz": 103,
+  "gender": "male",
+  "chars_per_sec": 6.11,
+  "pause_sec": 0.5,
+  "speech_sec": 71.6,
+  "segments": 27,
+  "speakers": 1,
+  "teacher_ref": {
+    "file": "teacher.wav",
+    "seconds": 11.5,
+    "snr_db": 21.3,
+    "text": "蓋住心臟,當你看到這樣的畫面的時候,蓋住心臟這一面就是負面,也就是我們在課本上看到的那一面,所以這邊就是左邊,這裡就是右邊,翻過來。",
+    "from_": "00:22–00:33"
+  },
+  "refs": [
+    {
+      "file": "ref_1.wav",
+      "start": 22.1,
+      "end": 33.6,
+      "seconds": 11.5,
+      "snr_db": 21.3,
+      "score": 6.53,
+      "text": "蓋住心臟,當你看到這樣的畫面的時候,蓋住心臟這一面就是負面,也就是我們在課本上看到的那一面,所以這邊就是左邊,這裡就是右邊,翻過來。"
+    },
+    {
+      "file": "ref_2.wav",
+      "start": 54.2,
+      "end": 65.8,
+      "seconds": 11.6,
+      "snr_db": 21.6,
+      "score": 6.52
+    },
+    {
+      "file": "ref_3.wav",
+      "start": 4.4,
+      "end": 16.1,
+      "seconds": 11.7,
+      "snr_db": 18.8,
+      "score": 5.73
+    }
+  ],
+  "match": null,
+  "rate": "+20%"
+}

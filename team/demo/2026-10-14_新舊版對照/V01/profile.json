@@ -1,0 +1,45 @@
+{
+  "f0_hz": 248,
+  "gender": "female",
+  "chars_per_sec": 4.11,
+  "pause_sec": 0.6,
+  "speech_sec": 149.5,
+  "segments": 53,
+  "speakers": 1,
+  "teacher_ref": {
+    "file": "teacher.wav",
+    "seconds": 8.9,
+    "snr_db": 20.2,
+    "text": "觀察得太仔細了,蜘蛛的身體只分成頭胸部和腹部兩段,所以它不符合昆蟲的定義。",
+    "from_": "02:02–02:11"
+  },
+  "refs": [
+    {
+      "file": "ref_1.wav",
+      "start": 122.7,
+      "end": 131.6,
+      "seconds": 8.9,
+      "snr_db": 20.2,
+      "score": 6.76,
+      "text": "觀察得太仔細了,蜘蛛的身體只分成頭胸部和腹部兩段,所以它不符合昆蟲的定義。"
+    },
+    {
+      "file": "ref_2.wav",
+      "start": 51.6,
+      "end": 60.6,
+      "seconds": 9.0,
+      "snr_db": 17.7,
+      "score": 6.65
+    },
+    {
+      "file": "ref_3.wav",
+      "start": 93.6,
+      "end": 101.6,
+      "seconds": 8.0,
+      "snr_db": 18.8,
+      "score": 6.5
+    }
+  ],
+  "match": null,
+  "rate": "+2%"
+}

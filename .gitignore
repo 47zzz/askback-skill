@@ -16,3 +16,6 @@ remotion/node_modules/
 remotion/out/
 remotion/public/job/
 remotion/public/fonts/
+
+# 原片不進 repo（team/demo 的對照頁會自動改用 YouTube 連結）
+team/demo/**/orig.mp4

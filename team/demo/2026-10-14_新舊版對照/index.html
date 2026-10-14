@@ -1,0 +1,110 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AskBack 新舊版對照</title>
+<style>
+body{font-family:"Noto Sans TC",system-ui,sans-serif;margin:0;padding:24px;background:#f6f5f0;color:#222}
+h1{margin:0 0 4px} .lead{color:#555;margin:0 0 24px;max-width:70em}
+section{background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:28px;box-shadow:0 1px 3px #0002}
+h2 small{font-weight:400;color:#666;font-size:.7em} .q{background:#fff8e1;padding:8px 12px;border-radius:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:14px}
+.cell video,.grid2 img{width:100%;border-radius:8px;background:#000} .cell h4,.ref h4{margin:8px 0 6px}
+.meta{color:#666;font-size:.9em;margin:4px 0} .missing{color:#999} audio{width:100%;max-width:520px}
+.orig{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:12px 0 18px;padding:12px;background:#eef3f8;border-radius:10px}
+.orig video{width:100%;max-width:560px;border-radius:8px;background:#000}.orig .side{flex:1;min-width:220px}
+.orig button{font:inherit;padding:6px 12px;margin:0 6px 6px 0;border:1px solid #9ab;border-radius:6px;background:#fff;cursor:pointer}
+</style></head><body>
+<h1>AskBack 新舊版對照</h1>
+<p class="lead">三題都用<strong>同一份 lesson.json</strong>（舊版成品裡的腳本），所以內容一樣，差別只在流程：
+舊版＝edge-tts 固定聲音＋Pillow 逐格畫；中間＝只把畫面換成 Remotion；新版＝Remotion＋用 BreezyVoice 在 3090 上 clone 原片老師的聲音（每句合成 3 次、Whisper 聽回來挑最準的）。
+每支影片都標示「AI 生成教學示範，非原講者本人」。本頁含原講者聲線的 clone 結果，僅供組內交流，不是繳交內容。</p>
+
+<section>
+  <h2>V01　【概念】認識昆蟲　<small>國小中年級・自然・原片形式：動畫角色劇</small></h2>
+  <p class="q">學生的問題（第 200 秒）：老師說昆蟲身體分頭、胸、腹三段，可是螞蟻我看起來只有兩段耶。而且蜘蛛也是小小的、也會爬，為什麼牠就不算昆蟲？</p>
+  <div class="orig">
+    <video id="orig-V01" controls preload="metadata" src="V01/orig.mp4" onerror="noOrig(this)"></video>
+    <div class="side"><h4 style="margin:0 0 6px">原始影片（完整版）</h4>
+      <p class="meta">學生在 03:20（第 200 秒）按下暫停發問；補充教學是接在這個點之後播放。</p>
+      <p class="meta"><a href="https://youtu.be/Z9u-4dlGBSY?t=200" target="_blank" rel="noopener">在 YouTube 從提問點看原片</a>（repo 裡沒有原片檔；把素材包的 videos/V01.mp4 複製成 V01/orig.mp4 就能在這頁直接播）</p>
+      <button onclick="seek('V01',180)">提問前 20 秒</button><button onclick="seek('V01',200)">跳到提問點 03:20</button><button onclick="seek('V01',0)">從頭</button>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="cell"><h4>舊版：edge-tts + Pillow</h4><video controls preload="metadata" src="../../outputs/V01/askback.mp4"></video><p class="meta">61.7 秒</p></div>
+    <div class="cell"><h4>中間：edge-tts + Remotion（只換畫面）</h4><video controls preload="metadata" src="V01/mid.mp4"></video><p class="meta">63.9 秒</p></div>
+    <div class="cell"><h4>新版：clone 原片老師 + Remotion</h4><video controls preload="metadata" src="V01/new.mp4"></video><p class="meta">75.8 秒</p></div>
+  </div>
+  <div class="ref">
+    <h4>clone 用的參考音檔（從原片 02:02–02:11 自動挑出，8.9 秒，SNR 20.2 dB）</h4>
+    <audio controls src="V01/ref.wav"></audio>
+    <p class="meta">逐字稿：觀察得太仔細了,蜘蛛的身體只分成頭胸部和腹部兩段,所以它不符合昆蟲的定義。</p>
+    <p class="meta">原片老師：女聲，F0 248 Hz，4.11 字/秒 → 語速 +2%。每句 CER：0.07, 0.00, 0.00, 0.00, 0.00, 0.00, 0.06, 0.00, 0.00（平均 0.014；0 = Whisper 聽回來一字不差）</p>
+  </div>
+  <details><summary>每句講完時的畫面（舊 / 新）</summary>
+    <div class="grid2">
+      <img src="../../outputs/V01/preview.jpg">
+      <img src="V01/prev_new.jpg">
+    </div>
+  </details>
+</section>
+<section>
+  <h2>V03　三位數的連加併式1　<small>三年級・數學・原片形式：電子黑板手寫</small></h2>
+  <p class="q">學生的問題（第 272 秒）：原來加法可以換位子湊整數，那如果題目是 1598−260+302，我是不是也可以先把 260 和 302 加起來，再用 1598 減掉？</p>
+  <div class="orig">
+    <video id="orig-V03" controls preload="metadata" src="V03/orig.mp4" onerror="noOrig(this)"></video>
+    <div class="side"><h4 style="margin:0 0 6px">原始影片（完整版）</h4>
+      <p class="meta">學生在 04:32（第 272 秒）按下暫停發問；補充教學是接在這個點之後播放。</p>
+      <p class="meta"><a href="https://youtu.be/XWwVgp0rP18?t=272" target="_blank" rel="noopener">在 YouTube 從提問點看原片</a>（repo 裡沒有原片檔；把素材包的 videos/V03.mp4 複製成 V03/orig.mp4 就能在這頁直接播）</p>
+      <button onclick="seek('V03',252)">提問前 20 秒</button><button onclick="seek('V03',272)">跳到提問點 04:32</button><button onclick="seek('V03',0)">從頭</button>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="cell"><h4>舊版：edge-tts + Pillow</h4><video controls preload="metadata" src="../../outputs/V03/askback.mp4"></video><p class="meta">68.6 秒</p></div>
+    <div class="cell"><h4>中間：edge-tts + Remotion（只換畫面）</h4><video controls preload="metadata" src="V03/mid.mp4"></video><p class="meta">68.6 秒</p></div>
+    <div class="cell"><h4>新版：clone 原片老師 + Remotion</h4><video controls preload="metadata" src="V03/new.mp4"></video><p class="meta">87.5 秒</p></div>
+  </div>
+  <div class="ref">
+    <h4>clone 用的參考音檔（從原片 01:12–01:24 自動挑出，11.5 秒，SNR 19.5 dB）</h4>
+    <audio controls src="V03/ref.wav"></audio>
+    <p class="meta">逐字稿：它是1858本接下來我們再把這1858加上302本科學類的書籍</p>
+    <p class="meta">原片老師：男聲，F0 132 Hz，3.14 字/秒 → 語速 -20%。每句 CER：0.03, 0.00, 0.03, 0.00, 0.00, 0.03, 0.03, 0.00, 0.07（平均 0.021；0 = Whisper 聽回來一字不差）</p>
+  </div>
+  <details><summary>每句講完時的畫面（舊 / 新）</summary>
+    <div class="grid2">
+      <img src="../../outputs/V03/preview.jpg">
+      <img src="V03/prev_new.jpg">
+    </div>
+  </details>
+</section>
+<section>
+  <h2>V13　豬心解剖　<small>七年級・生物・原片形式：實驗實拍</small></h2>
+  <p class="q">學生的問題（第 92 秒）：動脈壁比較厚、比較有彈性，是不是因為動脈裡流的都是含氧多的血？那從心臟延伸出來的肺動脈為什麼也叫動脈？</p>
+  <div class="orig">
+    <video id="orig-V13" controls preload="metadata" src="V13/orig.mp4" onerror="noOrig(this)"></video>
+    <div class="side"><h4 style="margin:0 0 6px">原始影片（完整版）</h4>
+      <p class="meta">學生在 01:32（第 92 秒）按下暫停發問；補充教學是接在這個點之後播放。</p>
+      <p class="meta"><a href="https://youtu.be/XQ8ULkUz404?t=92" target="_blank" rel="noopener">在 YouTube 從提問點看原片</a>（repo 裡沒有原片檔；把素材包的 videos/V13.mp4 複製成 V13/orig.mp4 就能在這頁直接播）</p>
+      <button onclick="seek('V13',72)">提問前 20 秒</button><button onclick="seek('V13',92)">跳到提問點 01:32</button><button onclick="seek('V13',0)">從頭</button>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="cell"><h4>舊版：edge-tts + Pillow</h4><video controls preload="metadata" src="../../outputs/V13/askback.mp4"></video><p class="meta">57.7 秒</p></div>
+    <div class="cell"><h4>中間：edge-tts + Remotion（只換畫面）</h4><video controls preload="metadata" src="V13/mid.mp4"></video><p class="meta">48.8 秒</p></div>
+    <div class="cell"><h4>新版：clone 原片老師 + Remotion</h4><video controls preload="metadata" src="V13/new.mp4"></video><p class="meta">57.7 秒</p></div>
+  </div>
+  <div class="ref">
+    <h4>clone 用的參考音檔（從原片 00:22–00:33 自動挑出，11.5 秒，SNR 21.3 dB）</h4>
+    <audio controls src="V13/ref.wav"></audio>
+    <p class="meta">逐字稿：蓋住心臟,當你看到這樣的畫面的時候,蓋住心臟這一面就是負面,也就是我們在課本上看到的那一面,所以這邊就是左邊,這裡就是右邊,翻過來。</p>
+    <p class="meta">原片老師：男聲，F0 103 Hz，6.11 字/秒 → 語速 +20%。每句 CER：0.03, 0.00, 0.00, 0.00, 0.00, 0.04, 0.00, 0.06, 0.00（平均 0.014；0 = Whisper 聽回來一字不差）</p>
+  </div>
+  <details><summary>每句講完時的畫面（舊 / 新）</summary>
+    <div class="grid2">
+      <img src="../../outputs/V13/preview.jpg">
+      <img src="V13/prev_new.jpg">
+    </div>
+  </details>
+</section>
+<script>function noOrig(v){v.outerHTML='<p class="missing">（這台電腦沒有原片檔，請用右邊的 YouTube 連結）</p>';}
+function seek(id,t){const v=document.getElementById('orig-'+id);v.currentTime=t;v.play();}</script>
+</body></html>

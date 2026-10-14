@@ -7,6 +7,7 @@ team/
 ├── README.md         這份：怎麼一起改、怎麼測、怎麼存成果
 ├── docs/             設計文件（流程說明等）
 ├── outputs/          各題的測試成果與進度表
+├── demo/             對照頁等交流用的成果（例如 2026-10-14_新舊版對照/，打開 index.html）
 └── save_output.sh    把剛跑完的一題存進 outputs/
 ```
 
@@ -84,11 +85,15 @@ bash <repo 路徑>/team/save_output.sh
 
 ## 目前還沒做的事
 
-- [ ] 在有 3090 的機器上實跑一次 `setup.sh --tts` 與 clone 配音（目前 Remotion 與 Pillow 引擎、look.py、voice.py 已在 Linux 無 GPU 的機器上測過；BreezyVoice adapter 只在 CPU 上跑過安裝檢查）
-- [ ] 用真實均一影片驗證 voice.py 抽參考音檔的品質（有背景音樂、角色劇兩個聲音的題目）
+- [x] 在有 3090 的機器上實跑一次 `setup.sh --tts` 與 clone 配音（2026-10-14，V01/V03/V13 都出片；每句 CER 平均 0.014–0.021。結果見根目錄 README〈實測〉）
+- [x] 用真實均一影片驗證 voice.py 抽參考音檔的品質（2026-10-14，V01 角色劇、V03 黑板、V13 實拍，三題挑出的段落 SNR 19.5–21.3 dB、逐字稿正確）
+- [ ] 角色劇裡真的有兩個人講話的題目（V01 偵測到只有一位說話者）、背景音樂很大聲的題目，還沒測
+- [ ] 計算節點的 Chrome 缺 `libnss3`／`libnspr4`，Remotion 只能在登入節點跑；要嘛 setup.sh 補裝這兩個函式庫，要嘛文件寫清楚「配音和畫面分兩台跑」
+- [ ] clone 會照老師原本的語速，慢的老師（V03：87.5 秒）很接近 90 秒上限；SKILL.md 的字數建議要不要依語速調整
 - [ ] 讓全新的 agent 只讀 repo 說明跑完一題（Claude Code 與 Codex 各一次）
 - [ ] `slides` 形式還沒有完整題目測過
 - [x] 在 Linux 上測一次（2026-10-14，V01/V03/V13 範例腳本，兩個引擎）
+- [x] 新舊版並排對照頁（2026-10-14，舊版／只換 Remotion／clone＋Remotion 三版加原片，在 `team/demo/2026-10-14_新舊版對照/`）
 - [ ] `scripts/paint.py`（生圖）與 OpenAI 的語音、辨識備援沒有金鑰可測
 - [ ] 決定 `examples/` 與 `team/outputs/` 裡的三題腳本要不要換成非題庫的例子（它們是正式 20 題之一）
 - [ ] 20 題都跑過一輪，填滿進度表
