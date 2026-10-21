@@ -1,9 +1,9 @@
 # AskBack AI 學生
 
-給 AskBack 補充教學影片打分數的評量 skill。和 AI 老師（[askback-skill](https://github.com/47zzz/askback-skill)）組成迴圈：
+給 AskBack 補充教學影片打分數的評量 skill。和 AI 老師（這個 repo 根目錄的 askback-teacher skill）組成迴圈：
 老師出片 → 學生評量 → 老師依建議改片 → 再評量。
 
-> 這個 repo 是組內的研究工具，**不是作業的繳交內容**。
+> 放在 `team/` 底下：這是組內的研究工具，**不是作業的繳交內容**，助教的 agent 不會用到。
 
 ## 輸入與輸出
 
@@ -86,5 +86,5 @@ fonts/                   Noto Sans TC（拼圖標字用，SIL OFL 1.1）
 
 ```bash
 python3 -m pip install -r requirements.txt
-ln -s "$(pwd)" ~/.claude/skills/askback-student     # 在 Claude Code 裡用 /askback-student
+ln -s "$(pwd)" ~/.claude/skills/askback-student     # 在 team/askback-student/ 裡執行；之後在 Claude Code 裡用 /askback-student
 ```

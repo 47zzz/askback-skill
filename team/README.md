@@ -7,6 +7,7 @@ team/
 ├── README.md         這份：怎麼一起改、怎麼測、怎麼存成果
 ├── docs/             設計文件（流程說明等）
 ├── outputs/          各題的測試成果與進度表
+├── askback-student/  AI 學生評量 skill：幫 AI 老師的影片打 0–100 分並給改片建議（見它的 README.md）
 ├── demo/             對照頁等交流用的成果（例如 2026-10-14_新舊版對照/，打開 index.html）
 └── save_output.sh    把剛跑完的一題存進 outputs/
 ```

@@ -122,7 +122,7 @@ def read_vtt(p, until=None):
 # ───────────────────────── 拼圖 ─────────────────────────
 def font(size):
     from PIL import ImageFont
-    for p in [ROOT / "fonts/NotoSansTC.ttf", ROOT.parent / "askback-skill/fonts/NotoSansTC.ttf",
+    for p in [ROOT / "fonts/NotoSansTC.ttf", ROOT.parent.parent / "fonts/NotoSansTC.ttf",
               "/System/Library/Fonts/STHeiti Medium.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
               "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc"]:
         if pathlib.Path(p).exists():
