@@ -60,12 +60,13 @@ def main():
     ap.add_argument("--out", default="analysis.md")
     a = ap.parse_args()
 
-    reps = [(p, load_json(p)) for p in find_reports(a.paths)]
-    if not reps:
+    reps_all = [(p, load_json(p)) for p in find_reports(a.paths)]
+    if not reps_all:
         sys.exit("找不到任何 report.json")
+    reps = [(p, r) for p, r in reps_all if r.get("per_rater")]      # 直接記 0 分（沒畫面或沒聲音）的不進信度計算
     rubric = load_json(INSTRUMENT / "rubric.json")
-    L = [f"# 評量工具的信度與效度分析", "", f"共 {len(reps)} 份報告，"
-         f"{len({r['sha256'] for _, r in reps})} 支不同影片，{len({r['case_id'] for _, r in reps})} 題。", ""]
+    L = [f"# 評量工具的信度與效度分析", "", f"共 {len(reps_all)} 份報告（{len(reps_all) - len(reps)} 份是沒畫面或沒聲音直接記 0 分），"
+         f"{len({r['sha256'] for _, r in reps_all})} 支不同影片，{len({r['case_id'] for _, r in reps_all})} 題。", ""]
 
     # ── 評分者間信度 ──
     L += ["## 信度", "", "### 評分者間（同一支影片、不同評分者）", "",
@@ -140,7 +141,7 @@ def main():
     if a.groups:
         g = read_csv(a.groups)
         grp = defaultdict(list)
-        for _, rep in reps:
+        for _, rep in reps_all:
             row = next((x for x in g if key_of(rep, x)), None)
             if row:
                 grp[row["group"]].append(rep["overall"])
@@ -154,14 +155,14 @@ def main():
     if a.human:
         h = read_csv(a.human)
         xs, ys, per_c = [], [], defaultdict(lambda: ([], []))
-        for _, rep in reps:
+        for _, rep in reps_all:
             row = next((x for x in h if key_of(rep, x)), None)
             if row and row.get("human_total"):
                 xs.append(rep["overall"])
                 ys.append(float(row["human_total"]))
                 for c in ("C1", "C2", "C3", "C4"):
                     if row.get(c):
-                        per_c[c][0].append(rep["rubric"]["constructs"][c]["mean"])
+                        per_c[c][0].append(((rep.get("rubric") or {}).get("constructs") or {}).get(c, {}).get("mean", 0.0))
                         per_c[c][1].append(float(row[c]))
         L += ["### 效標關聯效度：和人工評分比", ""]
         if xs:
