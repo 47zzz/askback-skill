@@ -33,7 +33,7 @@ def ffmpeg() -> str:
 
 
 def run(cmd, **kw):
-    return subprocess.run([str(c) for c in cmd], capture_output=True, text=True, **kw)
+    return subprocess.run([str(c) for c in cmd], capture_output=True, text=True, encoding="utf-8", errors="replace", **kw)
 
 
 def stamp(s: float) -> str:
@@ -152,3 +152,26 @@ def fuzzy_contains(quote: str, text: str) -> float:
                 best = max(best, cur[j])
         prev = cur
     return best / len(q)
+
+
+@functools.lru_cache(maxsize=1)
+def _pinyin():
+    try:
+        from pypinyin import lazy_pinyin
+        return lazy_pinyin
+    except Exception:
+        return None
+
+
+def has_keyword(text: str, kw: str) -> bool:
+    """關鍵詞有沒有出現在 text 裡。裝了 pypinyin 時用不分聲調的拼音比對，容忍語音辨識的同音錯字（會爬／繪爬）。"""
+    t, k = norm_zh(text), norm_zh(kw)
+    if not k:
+        return False
+    if k in t:
+        return True
+    py = _pinyin()
+    if not py or len(k) < 2:
+        return False
+    tp, kp = py(t), py(k)
+    return any(tp[i:i + len(kp)] == kp for i in range(len(tp) - len(kp) + 1))

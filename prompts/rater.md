@@ -21,7 +21,7 @@
 - `meta.json`：客觀指標（長度、響度、說話比例、語速 `asr.rate_cps`、辨識信心 `asr.confidence`、與腳本的字錯率 `script_cer`；原片語速 `prefix.rate_cps`）。
 - `transcript.txt`：旁白逐字稿（機器辨識，可能有同音錯字；判斷內容正確性時，以畫面和上下文推斷原意，不要因為辨識錯字扣「內容正確」）。
   畫面上有燒進去的字幕時，**以字幕為準**。`meta.json` 的 `asr.model` 是 `small` 時，辨識器本身就常出錯：C4.1 要看錯字是不是集中在同一句、是不是連字幕都對不上，不要光看字錯率就扣分。
-- `sheet_segments*.jpg`：每一句講完時的畫面＋那一句逐字稿。
+- `sheet_segments*.jpg`：每一句講到後段時的畫面＋那一句逐字稿。
 - `sheet_uniform.jpg`：每隔幾秒一格。
 - `frames/`：單張截圖，要放大看就開。
 

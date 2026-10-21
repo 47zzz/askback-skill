@@ -40,7 +40,7 @@ def main():
     # 句間塞黑畫面：在每段靜音的中點插 2.5 秒
     import re
     sil = run([ffmpeg(), "-hide_banner", "-nostats", "-i", v, "-vn", "-af", "silencedetect=n=-35dB:d=0.3", "-f", "null", "-"]).stderr
-    mids = [(float(s) + float(e)) / 2 for s, e in zip(re.findall(r"silence_start: ([\d.]+)", sil), re.findall(r"silence_end: ([\d.]+)", sil))]
+    mids = [(float(s) + float(e)) / 2 for s, e in zip([max(0.0, float(x)) for x in re.findall(r"silence_start: (-?[\d.]+)", sil)], re.findall(r"silence_end: ([\d.]+)", sil))]
     mids = [m for m in mids if 1 < m < dur - 1][:12]
     if mids:
         cuts = [0.0] + mids + [dur]

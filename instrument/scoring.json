@@ -1,38 +1,105 @@
 {
- "version": "2026-10-21",
+ "version": "2026-10-21b",
  "overall": {
   "note": "總分 = 規準分（預測助教人工評分）與學習成效分（AI 學生前後測）的加權平均，0–100。",
   "rubric_weight": 0.75,
   "learning_weight": 0.25
  },
  "rubric": {
-  "construct_weights": {"C1": 35, "C2": 30, "C3": 20, "C4": 15},
+  "construct_weights": {
+   "C1": 35,
+   "C2": 30,
+   "C3": 20,
+   "C4": 15
+  },
   "c3_objective_share": 0.2,
   "c4_objective_share": 0.5,
   "item_to_100": "(分數 - 1) / 4 × 100；null（不適用）不計"
  },
  "objective": {
-  "duration": {"ok": [30, 90], "zero_at": [15, 120]},
-  "loudness_lufs": {"ok": [-23, -14], "minus_per_lu": 10},
-  "speech_ratio": {"full_at": 0.6, "zero_at": 0.2},
-  "intelligibility": {"script_cer_zero_at": 0.5, "asr_conf_zero_at": 0.4, "asr_conf_full_at": 0.9},
-  "pace_ratio_vs_prefix": {"ok": [0.85, 1.2], "zero_at": [0.5, 1.8]}
+  "duration": {
+   "ok": [
+    30,
+    90
+   ],
+   "zero_at": [
+    15,
+    120
+   ]
+  },
+  "loudness_lufs": {
+   "ok": [
+    -23,
+    -14
+   ],
+   "minus_per_lu": 10
+  },
+  "speech_ratio": {
+   "full_at": 0.6,
+   "zero_at": 0.2
+  },
+  "intelligibility": {
+   "asr_conf_zero_at": 0.4,
+   "asr_conf_full_at": 0.9,
+   "note": "固定用 Whisper 的辨識信心（有沒有老師腳本都同一種量法）；與腳本的字錯率只當參考"
+  },
+  "pace_ratio_vs_prefix": {
+   "ok": [
+    0.85,
+    1.2
+   ],
+   "zero_at": [
+    0.5,
+    1.8
+   ]
+  }
  },
  "caps": {
   "no_video_or_no_audio": 0,
-  "content_error": {"cap_total": 60, "rule": "過半數評分者在 claims 列出至少一個 wrong"},
-  "missing_ai_label": {"cap_c4": 40, "rule": "C4.4 的中位數 ≤ 2"},
-  "duration_out_of_range": {"cap_total": 70, "rule": "長度不在 30–90 秒"}
+  "content_error": {
+   "cap_total": 60,
+   "rule": "過半數評分者在 claims 列出至少一個 wrong"
+  },
+  "missing_ai_label": {
+   "cap_c4": 40,
+   "rule": "C4.4 的中位數 ≤ 2"
+  },
+  "duration_out_of_range": {
+   "cap_total": 70,
+   "rule": "長度不在 30–90 秒"
+  }
  },
  "learning": {
-  "role_weights": {"target": 1.5, "diagnostic": 1.5, "near": 1.0, "far": 1.0},
-  "credit": {"correct_grounded": 1.0, "correct_ungrounded": 0.5, "wrong": 0.0},
-  "grounding": {"min_quote_match": 0.6, "window_sec": 10},
-  "high_confidence": 4
+  "role_weights": {
+   "target": 1.5,
+   "diagnostic": 1.5,
+   "near": 1.0,
+   "far": 1.0
+  },
+  "credit": {
+   "correct_grounded": 1.0,
+   "correct_ungrounded": 0.5,
+   "wrong": 0.0,
+   "note": "後測答對＋引用到影片中講這一題的原句（含該題 evidence_keywords）才給 1 分；前測就會、沒改答也一樣要有依據"
+  },
+  "grounding": {
+   "min_quote_match": 0.6,
+   "window_sec": 10
+  },
+  "high_confidence": 4,
+  "ceiling": {
+   "note": "AI 學生前測在目標＋診斷題的答對率超過 full_weight_until 時，學習成效分的比重線性降低，到 zero_weight_at 時為 0",
+   "full_weight_until": 0.5,
+   "zero_weight_at": 0.9
+  }
  },
  "reliability": {
   "rwg_min": 0.7,
-  "rwg_null_variance_5pt": 2.0,
+  "rwg_null_variance": 1.34,
+  "rwg_note": "r*wg(J)（Lindell et al., 1999）；虛無分配用輕度偏態（變異數 1.34），因為 LLM 評分者普遍偏寬鬆、少用 1–2 分",
+  "sd_floor": 5.0,
+  "sd_floor_note": "少數人剛好同分時標準差以 5 分計，避免信賴區間變成 0",
+  "ci_halfwidth_max": 10,
   "min_raters": 2,
   "recommended_raters": 3,
   "min_students": 2,

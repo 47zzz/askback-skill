@@ -5,13 +5,13 @@
     python3 SKILL/scripts/observe.py                       # 預設評 output/askback.mp4
     python3 SKILL/scripts/observe.py --video other.mp4     # 評別支影片（題目仍讀 input/case_input.json）
 
-產出 eval/runs/<影片雜湊前 8 碼>/observe/：
+產出 eval/runs/<影片雜湊前 8 碼>-<第幾次>/observe/（每次評量一個新資料夾）：
     meta.json            客觀指標（長度、響度、靜音比例、語速、辨識信心、與腳本的字錯率…）
     transcript.txt       逐字稿，每行 [起–迄] 文字
     sheet_segments*.jpg  每一句講完時的畫面＋那一句的逐字稿（看「音畫對不對得上」）
     sheet_uniform.jpg    每隔幾秒一格（看整體節奏與版面）
     frames/              上面用到的單張截圖（要放大看細節時開這裡）
-    prefix/              原片：overview.jpg（整段 12 格）、end_*.jpg（提問前的畫面）、transcript.txt
+以及同一層的 prefix/：原片 overview.jpg（整段 12 格）、end_*.jpg（提問前的畫面）、transcript.txt
 """
 import argparse, hashlib, json, math, os, pathlib, re, sys, textwrap
 
@@ -177,10 +177,13 @@ def main():
             "  試題要在看影片之前定下來，才不會被影片內容牽著走。")
 
     sha = hashlib.sha256(video.read_bytes()).hexdigest()
-    rid = sha[:8]
-    out = ev / "runs" / rid / "observe"
+    runs = ev / "runs"
+    n = 1 + max([int(d.name.rsplit("-", 1)[1]) for d in runs.glob(f"{sha[:8]}-*") if d.name.rsplit("-", 1)[1].isdigit()] or [0])
+    rid = f"{sha[:8]}-{n}"                     # 每次評量一個新資料夾：同一支影片重評（重測）也不會混到上一輪的結果
+    rdir = runs / rid
+    out = rdir / "observe"
     out.mkdir(parents=True, exist_ok=True)
-    (ev / "runs" / "LATEST").write_text(rid, encoding="utf-8")
+    (runs / "LATEST").write_text(rid, encoding="utf-8")
     case = load_json(a.case)
     print(f"評分對象：{video}（run {rid}）　題目：{case.get('case_id')} {case.get('title') or case.get('question', '')[:30]}")
 
@@ -196,6 +199,14 @@ def main():
     # 逐字稿
     topic = " ".join(filter(None, [case.get("title"), case.get("question")]))
     segs = asr(str(video), topic=topic) if meta["has_audio"] else []
+    if segs is None:                          # 辨識器沒裝好或壞掉：學生沒辦法引用原句，學習成效分會失真
+        meta["asr_ok"] = False
+        if not a.force:
+            die("語音辨識沒有成功（見上面的 ⚠）。先執行 python3 -m pip install -r " + str(ROOT / "requirements.txt") +
+                "，確定能下載 Whisper 模型後重跑。真的要在沒有逐字稿的情況下評，加 --force（學習成效分會不可比較）。")
+        segs = []
+    else:
+        meta["asr_ok"] = True
     lines = []
     if segs:
         lines = [f"[{stamp(s)}–{stamp(e)}] {t}" for s, e, t, _ in segs]
@@ -204,7 +215,7 @@ def main():
         meta["asr"] = dict(model=getattr(asr, "model", None), segments=len(segs), chars=chars, speech_sec=round(speech, 1),
                            rate_cps=round(chars / speech, 2) if speech else None,
                            confidence=round(sum(math.exp(lp) * (e - s) for s, e, _, lp in segs) / speech, 3) if speech else None)
-        # 只有評 output/askback.mp4 時才預設拿 output/lesson.json 比對；評別支影片要明確指定 --script
+        # 字錯率只當參考資訊（有沒有腳本會讓量法不同，不進分數）。只有評 output/askback.mp4 時才預設拿 output/lesson.json 比對
         default_video = video.resolve() == pathlib.Path("output/askback.mp4").resolve()
         sp = pathlib.Path(a.script) if a.script else pathlib.Path("output/lesson.json") if default_video else None
         if sp and sp.is_file():
@@ -212,29 +223,36 @@ def main():
                 lesson = load_json(sp)
                 says = "".join(b.get("say", "") for sc in lesson.get("scenes", []) for b in sc.get("beats", []))
                 meta["script_cer"] = round(cer(says, "".join(t for _, _, t, _ in segs)), 3)
-                print(f"  逐字稿與腳本的字錯率 {meta['script_cer']:.3f}（只當聽清楚程度的客觀指標）")
+                print(f"  逐字稿與腳本的字錯率 {meta['script_cer']:.3f}（參考資訊，不進分數）")
             except Exception as e:
                 print(f"  ⚠ 讀不了 {sp}（{e}），不算字錯率")
+    meta["audible"] = bool(meta["has_audio"] and segs and (meta.get("lufs") is not None and meta["lufs"] > -50))
+    if meta["has_audio"] and not meta["audible"]:
+        print("  ⚠⚠ 有音軌但聽不到講話（太小聲或沒有可辨識的語音）。計分時會當作「沒有聲音」→ 0 分。")
     (out / "transcript.txt").write_text("\n".join(lines) + "\n" if lines else "（沒有可辨識的語音）\n", encoding="utf-8")
 
     # 截圖
     fdir = out / "frames"
-    tiles = []
+    tiles, made = [], ["meta.json", "transcript.txt"]
     if meta["has_video"]:
         for i, (s, e, t, _) in enumerate(segs or []):
             jpg = grab(str(video), min(s + 0.75 * (e - s), dur - 0.1), fdir / f"seg{i + 1:02d}_{int(e):03d}s.jpg")
             tiles.append((jpg, f"#{i + 1}  {stamp(s)}–{stamp(e)}", t))
         for k in range(0, len(tiles), 12):
-            sheet(tiles[k:k + 12], out / f"sheet_segments{'' if k == 0 else f'_{k // 12 + 1}'}.jpg")
+            if sheet(tiles[k:k + 12], out / f"sheet_segments{'' if k == 0 else f'_{k // 12 + 1}'}.jpg"):
+                made.append(f"sheet_segments{'' if k == 0 else f'_{k // 12 + 1}'}.jpg")
         step = max(2.0, dur / 24)
         uni = [(grab(str(video), t, fdir / f"t{int(t):03d}.jpg"), stamp(t), "") for t in [step / 2 + i * step for i in range(int(dur // step))]]
-        sheet(uni, out / "sheet_uniform.jpg", cols=4, caption_lines=0)
+        if sheet(uni, out / "sheet_uniform.jpg", cols=4, caption_lines=0):
+            made.append("sheet_uniform.jpg")
+    if not any(m.startswith("sheet_segments") for m in made):
+        print("  ⚠ 沒有產生 sheet_segments.jpg（沒有逐字稿可以對齊），評分者與學生只能看 sheet_uniform.jpg。")
 
-    # 原片
+    # 原片（放在 run 底下的 prefix/，和影片材料分開：前測的 AI 學生只能看這裡）
     pre = pathlib.Path(a.prefix)
     t_ask = float(case.get("timestamp_seconds") or 0)
     if pre.exists():
-        pdir = out / "prefix"
+        pdir = rdir / "prefix"
         pdur = probe(str(pre))["duration"] or t_ask
         ov = [(grab(str(pre), pdur * (i + 0.5) / 12, pdir / f"ov{i:02d}.jpg", 480), stamp(pdur * (i + 0.5) / 12), "") for i in range(12)]
         sheet(ov, pdir / "overview.jpg", cols=4, caption_lines=0)
@@ -258,7 +276,7 @@ def main():
         print("  （沒有 input/prefix.mp4：「延續原片教法」只能靠 case_input.json 的 style 與 context_summary 判斷）")
 
     dump_json(meta, out / "meta.json")
-    print(f"\n✓ {out}/ 準備好了：meta.json、transcript.txt、sheet_segments*.jpg、sheet_uniform.jpg" + ("、prefix/" if pre.exists() else ""))
+    print(f"\n✓ {out}/：" + "、".join(made) + (f"；原片在 {rdir / 'prefix'}/" if pre.exists() else ""))
     print(f"  下一步：python3 {ROOT}/scripts/score.py panel")
 
 

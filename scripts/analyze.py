@@ -20,7 +20,7 @@ from collections import defaultdict
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from common import INSTRUMENT, load_json
-from psychometrics import cohen_d, cronbach_alpha, icc, item_analysis, kripp_alpha, pearson, spearman
+from psychometrics import cohen_d, cronbach_alpha, icc1, item_analysis, kripp_alpha, pearson, spearman
 
 
 def find_reports(paths):
@@ -34,13 +34,9 @@ def find_reports(paths):
     return sorted(set(out))
 
 
-def rater_matrix(rdir):
-    """回傳 {rater: {item: score}}（已套用 score.py 的一致性規則前的原始分數）。"""
-    out = {}
-    for p in sorted(glob.glob(str(rdir / "panel" / "out" / "rater_*.json"))):
-        r = load_json(p)
-        out[r.get("rater")] = {x.get("id"): x.get("score") for x in r.get("ratings", [])}
-    return out
+def rater_matrix(rep):
+    """回傳 {評分者編號: {題: 分數}}，用 score.py 清理過（套用一致性規則後）的分數。"""
+    return {x["rater"]: x["scores"] for x in rep.get("rater_items", [])}
 
 
 def read_csv(p):
@@ -73,9 +69,10 @@ def main():
 
     # ── 評分者間信度 ──
     L += ["## 信度", "", "### 評分者間（同一支影片、不同評分者）", "",
-          "ICC(2,1) 是「隨便挑一位評分者」的信度；ICC(2,k) 是「k 位平均」的信度。一般 ≥ 0.75 好、0.5–0.75 中等、< 0.5 差（Koo & Li, 2016）。", "",
-          "| 構念 | 影片數 | ICC(2,1) | ICC(2,k) | Krippendorff α | Cronbach α |", "|---|---|---|---|---|---|"]
-    mats = [(rep, rater_matrix(p.parent)) for p, rep in reps]
+          "每支影片的評分者都是新開的獨立執行者（不是同一批人評所有影片），所以用單因子模型：ICC(1,1) 是「隨便挑一位評分者」的信度，"
+          "ICC(1,k) 是「k 位平均」的信度。一般 ≥ 0.75 好、0.5–0.75 中等、< 0.5 差（Koo & Li, 2016）。", "",
+          "| 構念 | 影片數 | ICC(1,1) | ICC(1,k) | Krippendorff α | Cronbach α |", "|---|---|---|---|---|---|"]
+    mats = [(rep, rater_matrix(rep)) for p, rep in reps]
     kmin = min((len(m) for _, m in mats if m), default=0)
     for c in rubric["constructs"]:
         ids = [it["id"] for it in c["items"]]
@@ -97,11 +94,11 @@ def main():
                 item_means.append(st.fmean(v) if v else None)
             if all(x is not None for x in item_means):
                 A.append(item_means)
-        i1, ik = icc(X) if len(X) >= 2 else (None, None)
+        i1, ik = icc1(X) if len(X) >= 2 else (None, None)
         L.append(f"| {c['id']} {c['name']} | {len(X)} | {f(i1)} | {f(ik)} | {f(kripp_alpha(units))} | {f(cronbach_alpha(A))} |")
-    tot = [[p["rubric_total"] for p in rep["per_rater"][:kmin]] for rep, _ in reps if len(rep["per_rater"]) >= max(2, kmin)]
+    tot = [[p["rubric_total"] for p in rep["per_rater"][:kmin]] for _, rep in reps if len(rep["per_rater"]) >= max(2, kmin)]
     tot = [row for row in tot if all(x is not None for x in row)]
-    i1, ik = icc(tot) if len(tot) >= 2 else (None, None)
+    i1, ik = icc1(tot) if len(tot) >= 2 else (None, None)
     L += [f"| 規準總分 | {len(tot)} | {f(i1)} | {f(ik)} | {f(kripp_alpha(tot))} | — |", ""]
     if len(reps) < 5:
         L += [f"> 影片少於 5 支，ICC 與 α 的估計非常不穩定，只當參考。", ""]
@@ -116,7 +113,7 @@ def main():
         d = [abs(x - y) for x, y in pairs]
         L += [f"{len(pairs)} 支影片評過兩次：相關 r = {f(pearson(*zip(*pairs)))}，總分平均差 {st.fmean(d):.1f} 分（最大 {max(d):.1f}）。", ""]
     else:
-        L += ["還沒有同一支影片評兩次的紀錄。在同一個資料夾再跑一次 observe → panel → score 就會有。", ""]
+        L += ["還沒有同一支影片評兩次的紀錄。同一支影片再跑一次 observe → panel → score（會開新的 run）就會有。", ""]
 
     # ── 試題分析 ──
     L += ["### 學習成效試題", "", "難度 p＝後測答對率（太接近 1 代表題目太簡單、AI 學生本來就會）；鑑別度＝這題答對與否和其他題總分的相關（< 0.2 的題目建議修改）。", ""]

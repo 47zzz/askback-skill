@@ -3,3 +3,4 @@ numpy
 Pillow
 imageio-ffmpeg
 opencc-python-reimplemented
+pypinyin
