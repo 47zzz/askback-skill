@@ -277,7 +277,10 @@ def main():
 
     dump_json(meta, out / "meta.json")
     print(f"\n✓ {out}/：" + "、".join(made) + (f"；原片在 {rdir / 'prefix'}/" if pre.exists() else ""))
-    print(f"  下一步：python3 {ROOT}/scripts/score.py panel")
+    if not meta["has_video"] or not meta["audible"]:
+        print(f"  ⚠⚠ 這支影片沒有畫面或聽不到講話，直接計 0 分：python3 {ROOT}/scripts/score.py score（不用派評分小組）")
+    else:
+        print(f"  下一步：python3 {ROOT}/scripts/score.py panel")
 
 
 if __name__ == "__main__":

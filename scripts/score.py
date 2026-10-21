@@ -55,7 +55,8 @@ def cmd_exam(a):
     p = ev / "exam.md"
     p.write_text(fill((PROMPTS / "examiner.md").read_text(encoding="utf-8"), CASE=case, SPEC=(INSTRUMENT / "test_spec.md").resolve(),
                       VTT_LINE=f"- `{vtt.resolve()}`：原片到提問時間為止的字幕" if vtt.exists() else "",
-                      OUT=fi.resolve(), CWD=pathlib.Path.cwd(), SCORE=SCORE_PY, NEWFORM=" --new-form" if fl.exists() else ""), encoding="utf-8")
+                      OUT=fi.resolve(), CWD=pathlib.Path.cwd(), SCORE=SCORE_PY,
+                      NEWFORM=f" --eval {ev.resolve()} --case {case}" + (" --new-form" if fl.exists() else "")), encoding="utf-8")
     print(f"✓ 出題者指令檔：{p.resolve()}")
     print("  交給一個**沒看過要評的影片**的執行者（subagent 或新的 headless 行程），指令只寫「完整照著 <這個檔案> 做」。")
     print(f"  例如：{headless_cmd(p.resolve())}")
@@ -506,6 +507,18 @@ def cmd_score(a):
     rid, rdir = latest_run(ev, a.run)
     obs, out = rdir / "observe", rdir / "panel" / "out"
     meta, items, lock = load_json(obs / "meta.json"), load_json(fi), load_json(fl)
+    if not meta.get("has_video") or not meta.get("audible", meta.get("has_audio")):
+        # 沒畫面或聽不到聲音：直接 0 分，不用派評分小組
+        rep = dict(case_id=meta.get("case_id"), run_id=rid, label=a.label or rid, video=meta.get("video"), sha256=meta.get("sha256"),
+                   items_form=lock["form"], items_sha256=lock["sha256"], overall=0.0, overall_se=None, overall_df=None, overall_ci95=None,
+                   flags=["沒有畫面或聽不到聲音 → 0 分（沒有派評分小組）"], scored_at=now())
+        dump_json(rep, rdir / "report.json")
+        (rdir / "report.md").write_text(f"# AI 學生評量報告：{rep['case_id']}\n\n**0 / 100**：影片沒有畫面或聽不到講話"
+                                        f"（音軌：{'有' if meta.get('has_audio') else '沒有'}，響度 {meta.get('lufs')} LUFS）。\n", encoding="utf-8")
+        with open(ev / "history.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({k: rep[k] for k in ("case_id", "run_id", "label", "sha256", "items_form", "items_sha256", "overall", "scored_at")}, ensure_ascii=False) + "\n")
+        print(f"總分 0（沒有畫面或聽不到聲音，不用派評分小組）\n✓ {rdir}/report.md")
+        return
     if sha_file(fi) != lock["sha256"]:
         die("eval/items.json 在鎖定後被改過。改回來，或用 freeze --new-form 換一份新試題重跑整套。")
     man = load_json(rdir / "panel" / "manifest.json") if (rdir / "panel" / "manifest.json").exists() else None
